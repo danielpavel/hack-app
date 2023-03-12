@@ -1,11 +1,102 @@
 import Head from 'next/head'
-import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import styles from '@/styles/Home.module.css'
+import { Box, Code, Grid, GridItem, SlideFade, Spinner, Text, useToast } from '@chakra-ui/react'
+import { MoonIcon } from '@chakra-ui/icons'
+import { FileUploader } from 'react-drag-drop-files'
+import { useEffect, useState } from 'react'
+import axios, { AxiosResponse } from 'axios'
+import { OPENAI_ENDPOINT_CALL_GPT3, OPENAI_ENDPOINT_CALL_GPT3_2, OPENAI_ENDPOINT_CALL_GPT3_3, OPENAI_ENDPOINT_CALL_SLEITHER, OPENAI_ENDPOINT_UPLOAD } from '@/utils/constants'
+
+import CopyToClipboard from "react-copy-to-clipboard";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { docco } from 'react-syntax-highlighter/dist/cjs/styles/hljs'
+import Image from 'next/image'
 
 const inter = Inter({ subsets: ['latin'] })
 
+const fileTypes = ["sol"];
+
 export default function Home() {
+  
+  const toast = useToast();
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [solFile, setSolFile] = useState<File>();
+
+  const [explanationResp, setExplanationResp] = useState<AxiosResponse<any, any>>();
+  const [unitTestsResponse, setUniTestResponse] = useState<AxiosResponse<any, any>>();
+  const [staticAnalysisResponse, setStaticAnalysisResponse] = useState<AxiosResponse<any, any>>();
+
+  const handleChange = async (file: File) => {
+    setSolFile(file);
+    
+    setExplanationResp(undefined)
+    setUniTestResponse(undefined)
+    setStaticAnalysisResponse(undefined)
+
+    const uploadFile = async() => {
+      const formData = new FormData()
+      formData.append("contract", file!);
+      try {
+        setLoading(true);
+        const response = await axios({
+          method: "post",
+          url: OPENAI_ENDPOINT_UPLOAD,
+          data: formData,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        const explanation_resp = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_3,
+          { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
+        );
+        
+        // console.log('[----] unit_testresponse', unit_test_response.data);
+        setExplanationResp(explanation_resp);
+
+        const unit_test_response = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_2,
+          { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
+        );
+        
+        // console.log('[----] unit_testresponse', unit_test_response.data);
+        setUniTestResponse(unit_test_response);
+
+        const audit_response = await axios.get(OPENAI_ENDPOINT_CALL_SLEITHER,
+          { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
+        );
+        
+        // console.log('[----] audit_response', audit_response.data);
+        setStaticAnalysisResponse(audit_response);
+        
+        setLoading(false);
+      } catch(error) {
+        setLoading(false);
+        toast({
+          title: 'Error.',
+          description: `Could not upload ${solFile?.name}`,
+          status: 'error',
+          duration: 9000,
+          isClosable: true,
+        })
+        console.log(error)
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    if (file) {
+      toast({
+        title: "File uploaded",
+        description: "We've successfully uploaded your smart contract file.",
+        status: "success",
+        duration: 9000,
+        isClosable: true,
+      });
+
+      uploadFile();
+    }
+  };
+  
   return (
     <>
       <Head>
@@ -14,110 +105,181 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
       <main className={styles.main}>
-        <div className={styles.description}>
-          <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>src/pages/index.tsx</code>
-          </p>
-          <div>
-            <a
-              href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              By{' '}
-              <Image
-                src="/vercel.svg"
-                alt="Vercel Logo"
-                className={styles.vercelLogo}
-                width={100}
-                height={24}
-                priority
-              />
-            </a>
-          </div>
-        </div>
-
-        <div className={styles.center}>
-          <Image
-            className={styles.logo}
-            src="/next.svg"
-            alt="Next.js Logo"
-            width={180}
-            height={37}
-            priority
-          />
-          <div className={styles.thirteen}>
+        <Box display="flex" flexDirection={"column"} alignItems="center">
+          <MoonIcon w={28} h={28} color="blue.200" />
+          <Text fontSize="5xl" fontWeight="semibold">
+            Welcome to Blue Moon
+          </Text>
+          <Box
+            display={"flex"}
+            alignItems="center"
+            w="100%"
+            justifyContent="end"
+            pt={2}
+          >
+            <Text pr={3} fontSize="lg" fontWeight="semibold">
+              Powered by
+            </Text>
             <Image
-              src="/thirteen.svg"
-              alt="13"
-              width={40}
-              height={31}
-              priority
-            />
-          </div>
-        </div>
+              className={styles.logo}
+              src="/OpenAI_Logo.svg"
+              alt="openai"
+              width={120}
+              height={20}
+            ></Image>
+          </Box>
+        </Box>
 
-        <div className={styles.grid}>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Docs <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Find in-depth information about Next.js features and&nbsp;API.
-            </p>
-          </a>
+        <Box
+          py={32}
+          w="100%"
+          display="flex"
+          flexDirection={"column"}
+          alignItems="center"
+        >
+          <Text fontSize="3xl" fontWeight="semibold">
+            Drop your Ethereum Smart Contract here
+          </Text>
 
-          <a
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Box
+            shadow="lg"
+            borderRadius="3xl"
+            w={450}
+            my={10}
+            py={10}
+            display="flex"
+            justifyContent="center"
+            bg="blue.100"
           >
-            <h2 className={inter.className}>
-              Learn <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Learn about Next.js in an interactive course with&nbsp;quizzes!
-            </p>
-          </a>
+            {loading ? (
+              <Spinner
+                thickness="4px"
+                speed="0.65s"
+                emptyColor="gray.200"
+                color="blue.500"
+                size="xl"
+              />
+            ) : (
+              <FileUploader
+                handleChange={handleChange}
+                name="file"
+                types={fileTypes}
+              />
+            )}
+          </Box>
 
-          <a
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Explanation */}
+          <Box
+            pt={32}
+            w="100%"
+            display="flex"
+            flexDirection={"column"}
+            alignItems="center"
           >
-            <h2 className={inter.className}>
-              Templates <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Discover and deploy boilerplate example Next.js&nbsp;projects.
-            </p>
-          </a>
+            {explanationResp && (
+              <Box
+                w="100%"
+                display="flex"
+                flexDirection={"column"}
+                alignItems="center"
+              >
+                <Text fontSize="3xl" fontWeight="semibold">
+                  Here's a quick explanation of your Smart Contract.
+                </Text>
 
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h2 className={inter.className}>
-              Deploy <span>-&gt;</span>
-            </h2>
-            <p className={inter.className}>
-              Instantly deploy your Next.js site to a shareable URL
-              with&nbsp;Vercel.
-            </p>
-          </a>
-        </div>
+                <SlideFade
+                  in={typeof explanationResp !== "undefined"}
+                  offsetY="20px"
+                >
+                  <Box
+                    p="40px"
+                    color="white"
+                    mt="4"
+                    bg="teal.500"
+                    rounded="md"
+                    shadow="md"
+                  >
+                    Here's a quick explanation of your Smart Contract. Here's a
+                    quick explanation of your Smart Contract.Here's a quick
+                    explanation of your Smart Contract.
+                  </Box>
+                </SlideFade>
+              </Box>
+            )}
+
+            {/* Unit Test Code Examples */}
+
+            {unitTestsResponse && (
+              <Box
+                pt={48}
+                w="100%"
+                display="flex"
+                flexDirection={"column"}
+                alignItems="center"
+              >
+                <Text fontSize="3xl" fontWeight="semibold">
+                  We take care of what you hate most, some boilerplate Unit
+                  Tests
+                </Text>
+
+                <SlideFade
+                  in={typeof unitTestsResponse !== "undefined"}
+                  offsetY="20px"
+                >
+                  <Box
+                    p="40px"
+                    color="white"
+                    mt="4"
+                    bg="teal.500"
+                    rounded="md"
+                    shadow="md"
+                  >
+                    <SyntaxHighlighter language="" style={docco}>
+                      {unitTestsResponse.data}
+                    </SyntaxHighlighter>
+                  </Box>
+                </SlideFade>
+              </Box>
+            )}
+
+            {/* Static Analysis */}
+            {staticAnalysisResponse && (
+              <Box
+                pt={48}
+                w="100%"
+                display="flex"
+                flexDirection={"column"}
+                alignItems="center"
+              >
+                <Text fontSize="3xl" fontWeight="semibold">
+                  We also run a static analysis, here's what it has to say
+                </Text>
+                <Text fontSize="lg" fontWeight="regular">
+                  Powered by Slither
+                </Text>
+
+                <SlideFade
+                  in={typeof staticAnalysisResponse !== "undefined"}
+                  offsetY="20px"
+                >
+                  <Box
+                    p="40px"
+                    color="white"
+                    mt="4"
+                    bg="teal.500"
+                    rounded="md"
+                    shadow="md"
+                  >
+                    {staticAnalysisResponse.data}
+                  </Box>
+                </SlideFade>
+              </Box>
+            )}
+          </Box>
+        </Box>
       </main>
     </>
-  )
+  );
 }

@@ -61,7 +61,7 @@ export default function Home() {
         // console.log('[----] audit_response', audit_response.data);
         setStaticAnalysisResponse(audit_response);
 
-        const explanation_resp = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_3,
+        const explanation_resp = await axios.post(OPENAI_ENDPOINT_CALL_GPT3_3,
           { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
         );
         
@@ -74,7 +74,7 @@ export default function Home() {
 
         toast({
           title: 'Error.',
-          description: `Could not upload ${solFile?.name}`,
+          description: `Something went wrong while getting responses`,
           status: 'error',
           duration: 9000,
           isClosable: true,

@@ -47,13 +47,6 @@ export default function Home() {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
-        const explanation_resp = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_3,
-          { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
-        );
-        
-        // console.log('[----] unit_testresponse', unit_test_response.data);
-        setExplanationResp(explanation_resp);
-
         const unit_test_response = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_2,
           { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
         );
@@ -67,10 +60,18 @@ export default function Home() {
         
         // console.log('[----] audit_response', audit_response.data);
         setStaticAnalysisResponse(audit_response);
+
+        const explanation_resp = await axios.get(OPENAI_ENDPOINT_CALL_GPT3_3,
+          { params: { contractName: solFile?.name.slice(0, solFile!.name.length - 4) } }
+        );
         
+        // console.log('[----] unit_testresponse', unit_test_response.data);
+        setExplanationResp(explanation_resp);
+
         setLoading(false);
       } catch(error) {
         setLoading(false);
+
         toast({
           title: 'Error.',
           description: `Could not upload ${solFile?.name}`,
@@ -78,6 +79,7 @@ export default function Home() {
           duration: 9000,
           isClosable: true,
         })
+
         console.log(error)
       } finally {
         setLoading(false);
@@ -186,7 +188,7 @@ export default function Home() {
                 alignItems="center"
               >
                 <Text fontSize="3xl" fontWeight="semibold">
-                  Here's a quick explanation of your Smart Contract.
+                  Here is a quick explanation of your Smart Contract.
                 </Text>
 
                 <SlideFade
@@ -201,9 +203,7 @@ export default function Home() {
                     rounded="md"
                     shadow="md"
                   >
-                    Here's a quick explanation of your Smart Contract. Here's a
-                    quick explanation of your Smart Contract.Here's a quick
-                    explanation of your Smart Contract.
+                    {explanationResp.data}
                   </Box>
                 </SlideFade>
               </Box>
@@ -254,7 +254,7 @@ export default function Home() {
                 alignItems="center"
               >
                 <Text fontSize="3xl" fontWeight="semibold">
-                  We also run a static analysis, here's what it has to say
+                  We also run a static analysis, here is what it has to say
                 </Text>
                 <Text fontSize="lg" fontWeight="regular">
                   Powered by Slither
